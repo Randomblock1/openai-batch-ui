@@ -4,7 +4,7 @@
 	import Dexie, { type Table } from 'dexie';
 
 	// Define Dexie database schema
-	class OpenAIDatabase extends Dexie {
+	class OpenAIBatchDatabase extends Dexie {
 		requests!: Table<Payload, string>; // 'custom_id' is primary key
 		batches!: Table<Batch, string>; // 'id' is primary key
 
@@ -18,7 +18,7 @@
 	}
 
 	// Create database instance
-	const db = new OpenAIDatabase();
+	const db = new OpenAIBatchDatabase();
 
 	// Define types for messages, payload, API responses and batches
 	type Message = {
@@ -72,6 +72,7 @@
 		id: string;
 		status: string;
 		created_at: number;
+		input_file_id: string;
 		output_file_id: string | null;
 	};
 
@@ -83,8 +84,7 @@
 	const messages = writable<Message[]>([
 		{
 			role: 'system',
-			content:
-				'You are ChatGPT, a large language model trained by OpenAI, based on the GPT-4 architecture. Knowledge cutoff: 2023-10.'
+			content: 'You are ChatGPT, a large language model trained by OpenAI, based on the GPT-4 architecture. Knowledge cutoff: 2023-10.'
 		}
 	]);
 	const requests = writable<Payload[]>([]);
@@ -100,26 +100,26 @@
 	});
 
 	// Persist API key to localStorage
-	const handleApiKeyChange = (event: Event) => {
+	function handleApiKeyChange(event: Event) {
 		const target = event.target as HTMLInputElement;
 		const value = target.value;
 		apiKey.set(value);
 		localStorage.setItem('openai_api_key', value);
-	};
+	}
 
 	// Add a new message to the conversation
-	const addMessage = (role: string, content: string) => {
+	function addMessage(role: string, content: string) {
 		messages.update((msgs) => [...msgs, { role, content }]);
 		userMessage.set('');
-	};
+	}
 
 	// Delete a message from the conversation thread
-	const deleteMessage = (index: number) => {
+	function deleteMessage(index: number) {
 		messages.update((msgs) => msgs.filter((_, i) => i !== index));
-	};
+	}
 
 	// Serialize the current request and reset the conversation
-	const serializeRequest = () => {
+	function serializeRequest() {
 		const timestamp = Date.now();
 		const modelValue = get(model);
 		const msgs = get(messages);
@@ -136,28 +136,31 @@
 
 		db.requests
 			.add(request)
-			.then(() => console.log('Request added to IndexedDB'))
+			.then(() => {
+				console.log('Request added to IndexedDB');
+				// Update requests store after adding to IndexedDB
+				requests.update((reqs) => [...reqs, request]);
+			})
 			.catch((error) => console.error('Error adding request:', error));
 
 		// Reset the messages store
 		messages.set([
 			{
 				role: 'system',
-				content:
-					'You are ChatGPT, a large language model trained by OpenAI, based on the GPT-4 architecture. Knowledge cutoff: 2023-10.'
+				content: 'You are ChatGPT, a large language model trained by OpenAI, based on the GPT-4 architecture. Knowledge cutoff: 2023-10.'
 			}
 		]);
-	};
+	}
 
 	// Upload the batched requests to OpenAI
-	const submitBatch = async () => {
+	async function submitBatch() {
 		const requests = await db.requests.toArray();
 		const fileContent = requests.map((request) => JSON.stringify(request)).join('\n');
 		const fileId = await uploadFile(fileContent);
 		const batch = await createBatchJob(fileId);
 		await db.batches.add(batch);
 		batches.update((bs) => [...bs, batch]);
-	};
+	}
 
 	// Upload file to OpenAI
 	async function uploadFile(fileContent: string): Promise<string> {
@@ -253,6 +256,29 @@
 		}
 	}
 
+	// Function to get requests associated with a batch from IndexedDB
+	async function getBatchRequests(batchId: string): Promise<Payload[] | null> {
+		try {
+			// Get the batch from IndexedDB
+			const batch = await db.batches.get(batchId);
+
+			// If the batch exists
+			if (batch) {
+				// Extract the custom_ids from the batch's input file content
+				const customIds = batch.input_file_id.split('\n').map((line: string) => JSON.parse(line).custom_id);
+
+				// Fetch the corresponding requests from IndexedDB
+				return await db.requests.where('custom_id').anyOf(customIds).toArray();
+			} else {
+				// Batch not found in IndexedDB
+				return null;
+			}
+		} catch (error) {
+			console.error('Error getting batch requests:', error);
+			return null;
+		}
+	}
+
 	// Download batch results file
 	async function downloadResultsFile(fileId: string): Promise<string> {
 		const apiKeyValue = get(apiKey);
@@ -265,9 +291,7 @@
 			});
 
 			if (!response.ok) {
-				throw new Error(
-					`Failed to download results file: ${response.status} ${response.statusText}`
-				);
+				throw new Error(`Failed to download results file: ${response.status} ${response.statusText}`);
 			}
 
 			const resultsFileContent = await response.text();
@@ -339,12 +363,11 @@
 		requests.set(storedRequests);
 	}
 
-	const deleteRequestFromQueue = async (index: number) => {
-		const reqs = get(requests);
-		const reqToDelete = reqs[index];
-		await db.requests.delete(reqToDelete.custom_id);
-		requests.update((rs) => rs.filter((_, i) => i !== index));
-	};
+	// Function to delete request from IndexedDB and update the requests store
+	async function deleteRequestFromQueue(custom_id: string) {
+		await db.requests.delete(custom_id);
+		requests.update((rs) => rs.filter((r) => r.custom_id !== custom_id));
+	}
 
 	// Update batch status every 15 minutes
 	setInterval(
@@ -368,131 +391,124 @@
 	);
 </script>
 
-<main class="container mx-auto p-4">
-	<h1 class="text-3xl font-bold text-center mb-4">OpenAI API Batch Interface</h1>
+<main class="container mx-auto p-4 space-y-8">
+	<h1 class="text-4xl font-bold text-center text-primary">OpenAI API Batch Interface</h1>
 
-	<div class="form-control w-full">
-		<label for="apiKey" class="label">
-			<span class="label-text">API Key:</span>
-		</label>
-		<input
-			type="text"
-			id="apiKey"
-			bind:value={$apiKey}
-			on:input={handleApiKeyChange}
-			class="input input-bordered w-full"
-		/>
-	</div>
+	<section>
+		<h2 class="text-2xl font-semibold text-primary">API Configuration</h2>
+		<div class="form-control w-full max-w-xs">
+			<label for="apiKey" class="label">
+				<span class="label-text text-primary">API Key:</span>
+			</label>
+			<input type="text" id="apiKey" bind:value={$apiKey} on:input={handleApiKeyChange} class="input input-bordered w-full" />
+		</div>
+	</section>
 
-	<h2>Conversation Thread</h2>
-	<div class="overflow-y-auto max-h-64">
-		{#each $messages as message, index}
-			<div class="alert alert-info shadow-lg mb-2">
-				<div>
+	<section>
+		<h2 class="text-2xl font-semibold text-primary">Conversation Thread</h2>
+		<div class="overflow-y-auto max-h-64 chat chat-start">
+			{#each $messages as message, index}
+				<div
+					class="chat-bubble chat-bubble-{message.role === 'user' ? 'end' : 'start'} bg-{message.role} text-{message.role === 'user'
+						? 'base-content'
+						: 'primary-content'}">
 					<span class="role font-bold">{message.role}:</span>
 					<span class="content">{message.content}</span>
-					<button
-						on:click={() => deleteMessage(index)}
-						class="btn btn-sm btn-circle btn-error absolute top-0 right-0"
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							class="h-3 w-3"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke="currentColor"
-							><path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M6 18L18 6M6 6l12 12"
-							/></svg
-						>
+					<button on:click={() => deleteMessage(index)} class="btn btn-sm btn-circle btn-error absolute top-0 right-0">
+						<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+							><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
 					</button>
 				</div>
-			</div>
-		{/each}
-	</div>
+			{/each}
+		</div>
+	</section>
 
-	<h2>Add Message</h2>
-	<div class="form-control">
-		<label for="role" class="label">
-			<span class="label-text">Role:</span>
-		</label>
-		<select id="role" bind:value={role} class="select select-bordered">
-			<option value="user">user</option>
-			<option value="system">system</option>
-		</select>
-	</div>
+	<section>
+		<h2 class="text-2xl font-semibold text-primary">Add Message</h2>
+		<div class="form-control max-w-xs">
+			<label for="role" class="label">
+				<span class="label-text text-primary">Role:</span>
+			</label>
+			<select id="role" bind:value={role} class="select select-bordered select-sm">
+				<option value="user">user</option>
+				<option value="system">system</option>
+				<option value="assistant">assistant</option>
+			</select>
+		</div>
 
-	<div class="form-control">
-		<label for="content" class="label">
-			<span class="label-text">Content:</span>
-		</label>
-		<textarea id="content" bind:value={$userMessage} class="textarea textarea-bordered h-48" />
-	</div>
-	<button on:click={() => addMessage(role, $userMessage)} class="btn btn-primary"
-		>Add Message</button
-	>
+		<div class="form-control">
+			<label for="content" class="label">
+				<span class="label-text text-primary">Content:</span>
+			</label>
+			<textarea id="content" bind:value={$userMessage} class="textarea textarea-bordered h-48 resize-none" />
+		</div>
+		<button on:click={() => addMessage(role, $userMessage)} class="btn btn-primary">Add Message</button>
+	</section>
 
-	<button on:click={serializeRequest} class="btn btn-secondary mt-4">Add to Batch Queue</button>
+	<button on:click={serializeRequest} class="btn bg-primary text-primary-content mt-4">Save to Unsubmitted Batch</button>
 
-	<h2>Batch Queue</h2>
-	<div class="overflow-y-auto max-h-64">
-		{#each $requests as request, index (request.custom_id)}
-			<div class="alert alert-warning shadow-lg mb-2">
-				<div>
-					<span>{request.custom_id}</span>
-					<button
-						on:click={() => deleteRequestFromQueue(index)}
-						class="btn btn-sm btn-circle btn-error absolute top-0 right-0"
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							class="h-3 w-3"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke="currentColor"
-							><path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M6 18L18 6M6 6l12 12"
-							/></svg
-						>
+	<section>
+		<h2 class="text-2xl font-semibold text-primary">
+			Message Request Queue
+			<span class="text-sm text-gray-500"> - These messages haven't been sent yet.</span>
+		</h2>
+		<div class="overflow-y-auto max-h-64">
+			{#each $requests as request (request.custom_id)}
+				<details class="alert alert-warning shadow-lg mb-2 relative">
+					<summary>{request.custom_id}</summary>
+					<pre>{JSON.stringify(request, null, 2)}</pre>
+					<button on:click={() => deleteRequestFromQueue(request.custom_id)} class="btn btn-sm btn-error absolute top-0 right-0">
+						<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+							><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
 					</button>
-				</div>
-			</div>
-		{/each}
-	</div>
+				</details>
+			{/each}
+		</div>
+	</section>
 
-	<button on:click={submitBatch} class="btn btn-success mt-4">Submit Batch</button>
+	<button on:click={submitBatch} class="btn from-primary to-primary text-primary-content mt-4">Submit Batch</button>
 
-	<h2>Batches</h2>
-	<ul>
-		{#each $batches as batch}
-			<li class="mb-2">
-				{batch.id} - {batch.status} - {new Date(batch.created_at * 1000).toLocaleString()}
-				{#if batch.status === 'completed'}
-					<button on:click={() => getBatchResults(batch.id)} class="btn btn-sm btn-outline"
-						>Get Results</button
-					>
+	<section>
+		<h2 class="text-2xl font-semibold text-primary">Pending Batches</h2>
+		<ul>
+			{#each $batches as batch}
+				{#if batch.status !== 'completed'}
+					<details class="alert alert-warning shadow-lg mb-2 relative">
+						<summary>{batch.id} - {batch.status} - {new Date(batch.created_at * 1000).toLocaleString()}</summary>
+						<ul>
+							{#await getBatchRequests(batch.id) then batchRequests}
+								{#if batchRequests}
+									{#each batchRequests as request}
+										<details class="alert alert-warning shadow-lg mb-2 ml-4">
+											<summary>{request.custom_id}</summary>
+											<pre>{JSON.stringify(request, null, 2)}</pre>
+										</details>
+									{/each}
+								{:else}
+									<p>Error: Batch requests not found.</p>
+								{/if}
+							{/await}
+						</ul>
+						<button on:click={() => cancelBatchJob(batch.id)} class="btn btn-sm btn-error absolute top-0 right-0">Cancel</button>
+					</details>
 				{/if}
-				<button on:click={() => cancelBatchJob(batch.id)} class="btn btn-sm btn-error"
-					>Cancel</button
-				>
-			</li>
-		{/each}
-	</ul>
+			{/each}
+		</ul>
+	</section>
 
-	<button on:click={listBatches} class="btn mt-4">List Batches</button>
+	<section>
+		<h2 class="text-2xl font-semibold text-primary">Completed Batches</h2>
+		<ul>
+			{#each $batches as batch}
+				{#if batch.status === 'completed'}
+					<li class="mb-2">
+						{batch.id} - {batch.status} - {new Date(batch.created_at * 1000).toLocaleString()}
+						<button on:click={() => getBatchResults(batch.id)} class="btn btn-sm btn-outline btn-primary">Get Results</button>
+					</li>
+				{/if}
+			{/each}
+		</ul>
+	</section>
 
-	<h2>Response</h2>
-	<pre class="overflow-y-auto max-h-64 p-4 bg-gray-800 text-white rounded-md">
-      {#each Object.entries(localStorage) as [key, value]}
-			{#if key.startsWith('request-')}
-				<div class="mb-2">{key}: {value}</div>
-			{/if}
-		{/each}
-    </pre>
+	<button on:click={listBatches} class="btn bg-primary text-primary-content mt-4">Refresh Batches</button>
 </main>
