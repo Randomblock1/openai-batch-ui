@@ -87,6 +87,7 @@
 				'You are ChatGPT, a large language model trained by OpenAI, based on the GPT-4 architecture. Knowledge cutoff: 2023-10.'
 		}
 	]);
+	const requests = writable<Payload[]>([]);
 	const batches = writable<Batch[]>([]);
 
 	// Load API Key from localStorage on mount
@@ -321,6 +322,7 @@
 			}
 
 			const data = await response.json();
+			// Force UI update by setting the store again
 			batches.set(data.data);
 		} catch (error) {
 			console.error('Error listing batches:', error);
@@ -328,11 +330,21 @@
 		}
 	}
 
-	// Load batches from IndexedDB
+	// Load batches & requests from IndexedDB
 	async function loadBatches() {
 		const storedBatches = await db.batches.toArray();
 		batches.set(storedBatches);
+
+		const storedRequests = await db.requests.toArray();
+		requests.set(storedRequests);
 	}
+
+	const deleteRequestFromQueue = async (index: number) => {
+		const reqs = get(requests);
+		const reqToDelete = reqs[index];
+		await db.requests.delete(reqToDelete.custom_id);
+		requests.update((rs) => rs.filter((_, i) => i !== index));
+	};
 
 	// Update batch status every 15 minutes
 	setInterval(
@@ -356,71 +368,131 @@
 	);
 </script>
 
-<main>
-	<h1>OpenAI API Batch Interface</h1>
+<main class="container mx-auto p-4">
+	<h1 class="text-3xl font-bold text-center mb-4">OpenAI API Batch Interface</h1>
 
-	<div>
-		<label for="apiKey">API Key:</label>
-		<input type="text" id="apiKey" bind:value={$apiKey} on:input={handleApiKeyChange} />
+	<div class="form-control w-full">
+		<label for="apiKey" class="label">
+			<span class="label-text">API Key:</span>
+		</label>
+		<input
+			type="text"
+			id="apiKey"
+			bind:value={$apiKey}
+			on:input={handleApiKeyChange}
+			class="input input-bordered w-full"
+		/>
 	</div>
 
 	<h2>Conversation Thread</h2>
-	<div>
+	<div class="overflow-y-auto max-h-64">
 		{#each $messages as message, index}
-			<div>
-				<span class="role">{message.role}:</span>
-				<span class="content">{message.content}</span>
-				<button on:click={() => deleteMessage(index)}>Delete</button>
+			<div class="alert alert-info shadow-lg mb-2">
+				<div>
+					<span class="role font-bold">{message.role}:</span>
+					<span class="content">{message.content}</span>
+					<button
+						on:click={() => deleteMessage(index)}
+						class="btn btn-sm btn-circle btn-error absolute top-0 right-0"
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							class="h-3 w-3"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+							><path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M6 18L18 6M6 6l12 12"
+							/></svg
+						>
+					</button>
+				</div>
 			</div>
 		{/each}
 	</div>
 
 	<h2>Add Message</h2>
-	<div>
-		<label for="role">Role:</label>
-		<select id="role" bind:value={role}>
+	<div class="form-control">
+		<label for="role" class="label">
+			<span class="label-text">Role:</span>
+		</label>
+		<select id="role" bind:value={role} class="select select-bordered">
 			<option value="user">user</option>
 			<option value="system">system</option>
 		</select>
-		<label for="content">Content:</label>
-		<textarea id="content" bind:value={$userMessage} />
-		<button on:click={() => addMessage(role, $userMessage)}>Add Message</button>
 	</div>
 
-	<button on:click={serializeRequest}>Serialize and Reset</button>
-	<button on:click={submitBatch}>Submit Batch</button>
+	<div class="form-control">
+		<label for="content" class="label">
+			<span class="label-text">Content:</span>
+		</label>
+		<textarea id="content" bind:value={$userMessage} class="textarea textarea-bordered h-48" />
+	</div>
+	<button on:click={() => addMessage(role, $userMessage)} class="btn btn-primary"
+		>Add Message</button
+	>
+
+	<button on:click={serializeRequest} class="btn btn-secondary mt-4">Add to Batch Queue</button>
+
+	<h2>Batch Queue</h2>
+	<div class="overflow-y-auto max-h-64">
+		{#each $requests as request, index (request.custom_id)}
+			<div class="alert alert-warning shadow-lg mb-2">
+				<div>
+					<span>{request.custom_id}</span>
+					<button
+						on:click={() => deleteRequestFromQueue(index)}
+						class="btn btn-sm btn-circle btn-error absolute top-0 right-0"
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							class="h-3 w-3"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+							><path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M6 18L18 6M6 6l12 12"
+							/></svg
+						>
+					</button>
+				</div>
+			</div>
+		{/each}
+	</div>
+
+	<button on:click={submitBatch} class="btn btn-success mt-4">Submit Batch</button>
 
 	<h2>Batches</h2>
 	<ul>
 		{#each $batches as batch}
-			<li>
+			<li class="mb-2">
 				{batch.id} - {batch.status} - {new Date(batch.created_at * 1000).toLocaleString()}
 				{#if batch.status === 'completed'}
-					<button on:click={() => getBatchResults(batch.id)}>Get Results</button>
+					<button on:click={() => getBatchResults(batch.id)} class="btn btn-sm btn-outline"
+						>Get Results</button
+					>
 				{/if}
-				<button on:click={() => cancelBatchJob(batch.id)}>Cancel</button>
+				<button on:click={() => cancelBatchJob(batch.id)} class="btn btn-sm btn-error"
+					>Cancel</button
+				>
 			</li>
 		{/each}
 	</ul>
 
-	<button on:click={listBatches}>List Batches</button>
+	<button on:click={listBatches} class="btn mt-4">List Batches</button>
 
 	<h2>Response</h2>
-	<pre>
+	<pre class="overflow-y-auto max-h-64 p-4 bg-gray-800 text-white rounded-md">
       {#each Object.entries(localStorage) as [key, value]}
 			{#if key.startsWith('request-')}
-				{key}: {value}
+				<div class="mb-2">{key}: {value}</div>
 			{/if}
 		{/each}
     </pre>
 </main>
-
-<style>
-	.role {
-		font-weight: bold;
-	}
-
-	.content {
-		margin-left: 10px;
-	}
-</style>
