@@ -189,6 +189,8 @@
 				</button>
 			{/if}
 			{#if batch.status === 'completed'}
+				<!-- TODO Add a button to download results -->
+				<!-- TODO display results inline -->
 				<li class="mb-2">
 					{batch.id} - {batch.status} - {new Date(batch.created_at * 1000).toLocaleString()}
 					<button on:click={() => getBatchResults(batch.id)} class="btn btn-sm btn-outline btn-primary">Get Results</button>

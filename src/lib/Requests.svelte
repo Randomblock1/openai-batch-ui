@@ -82,6 +82,7 @@
 </script>
 
 <section>
+	<!-- TODO allow uploading of custom JSONL conversation -->
 	<h2 class="text-2xl font-semibold text-primary">
 		Message Request Queue
 		<span class="text-sm text-gray-500"> - These messages haven't been sent yet.</span>
