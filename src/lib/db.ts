@@ -44,7 +44,7 @@ export type ApiResponse = {
 		};
 		request_id: string;
 	};
-	error: any;
+	error: string;
 };
 
 export type Batch = {

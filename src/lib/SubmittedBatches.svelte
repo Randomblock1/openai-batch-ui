@@ -182,6 +182,12 @@
 	</h2>
 	<ul class="p-4">
 		{#each $batches as batch}
+			{#if batch.status !== 'completed'}
+				<button on:click={() => cancelBatchJob(batch.id)} class="btn btn-sm btn-error absolute top-0 right-0">
+					<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+						><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+				</button>
+			{/if}
 			{#if batch.status === 'completed'}
 				<li class="mb-2">
 					{batch.id} - {batch.status} - {new Date(batch.created_at * 1000).toLocaleString()}
