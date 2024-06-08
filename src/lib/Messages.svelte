@@ -65,15 +65,14 @@
 	</h2>
 	<div class="overflow-y-auto max-h-64 p-4">
 		{#each $messages as message, index}
-			<div class="chat chat-{message.role === 'user' ? 'end' : 'start'}">
+			<div class="chat {message.role === 'user' ? 'chat-end' : 'chat-start'}">
 				<div class="chat-header">
 					{message.role}
 				</div>
 				<div class="chat-bubble p-4 pr-10">
 					{message.content}
 					<button on:click={() => deleteMessage(index)} class="btn btn-sm btn-circle btn-error absolute top-0 right-0">
-						<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="white"
-							><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+						<img src="/delete.svg" alt="Delete" />
 					</button>
 				</div>
 			</div>

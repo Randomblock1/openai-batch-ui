@@ -89,34 +89,6 @@
 		}
 	}
 
-	// Cancel batch job
-	async function cancelBatchJob(batchId: string) {
-		const apiKeyValue = $apiKey;
-
-		try {
-			const response = await fetch(`https://api.openai.com/v1/batches/${batchId}/cancel`, {
-				method: 'POST',
-				headers: {
-					Authorization: `Bearer ${apiKeyValue}`
-				}
-			});
-
-			if (!response.ok) {
-				throw new Error(`Failed to cancel batch job: ${response.status} ${response.statusText}`);
-			}
-
-			const data = await response.json();
-			console.log('Batch job cancelled:', data);
-
-			// Update batch status in IndexedDB
-			await db.batches.update(batchId, { status: data.status });
-			batches.update((bs) => bs.map((b) => (b.id === batchId ? data : b)));
-		} catch (error) {
-			console.error('Error cancelling batch job:', error);
-			throw error;
-		}
-	}
-
 	// List batches
 	async function listBatches() {
 		const apiKeyValue = $apiKey;
@@ -182,12 +154,6 @@
 	</h2>
 	<ul class="p-4">
 		{#each $batches as batch}
-			{#if batch.status !== 'completed'}
-				<button on:click={() => cancelBatchJob(batch.id)} class="btn btn-sm btn-error absolute top-0 right-0">
-					<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-						><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-				</button>
-			{/if}
 			{#if batch.status === 'completed'}
 				<!-- TODO Add a button to download results -->
 				<!-- TODO display results inline -->
