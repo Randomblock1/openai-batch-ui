@@ -6,6 +6,12 @@
 	import PendingBatches from '$lib/PendingBatches.svelte';
 	import SubmittedBatches from '$lib/SubmittedBatches.svelte';
 
+	apiKey.subscribe((value) => {
+		if (value) {
+			localStorage.setItem('openai_api_key', $apiKey);
+		}
+	});
+
 	// Load API Key from localStorage on mount
 	onMount(() => {
 		const storedApiKey = localStorage.getItem('openai_api_key');

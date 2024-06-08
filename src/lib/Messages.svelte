@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { db, type Request, type Message } from './db';
 	import { writable } from 'svelte/store';
-	import { pendingRequests } from './stores';
+	import { pendingRequests, selectedModel } from './stores';
+	import ModelDropdown from './ModelDropdown.svelte';
 
-	const model = writable('gpt-4o');
 	const message = writable('');
 	const role = writable('user');
 	const maxTokens = writable(1000);
@@ -27,13 +27,13 @@
 	}
 
 	// Serialize the current request and reset the conversation
-	function saveRequest() {
+	function saveMessagesToRequest() {
 		const request: Request = {
 			id: `request-${Date.now()}`,
 			method: 'POST',
 			url: '/v1/chat/completions',
 			body: {
-				model: $model,
+				model: $selectedModel,
 				messages: $messages,
 				max_tokens: $maxTokens
 			}
@@ -55,12 +55,6 @@
 				content: 'You are ChatGPT, a large language model trained by OpenAI, based on the GPT-4 architecture. Knowledge cutoff: 2023-10.'
 			}
 		]);
-	}
-
-	// Function to delete request from IndexedDB and update the requests store
-	async function deleteRequestFromQueue(requestId: string) {
-		await db.batchRequests.delete(requestId);
-		pendingRequests.update((rs) => rs.filter((r) => r.id !== requestId));
 	}
 </script>
 
@@ -109,31 +103,13 @@
 	<button on:click={() => addMessage($role, $message)} class="btn btn-primary px-6">Add Message</button>
 </section>
 
-<div class="form-control w-24">
-	<label for="maxTokens" class="label">
-		<span class="label-text text-primary">Max Tokens:</span>
-	</label>
-	<input type="number" id="maxTokens" bind:value={$maxTokens} class="input input-bordered" />
-</div>
-<button on:click={saveRequest} class="btn bg-primary text-primary-content mt-4 px-6">Save Conversation to Queue</button>
-
 <section>
-	<h2 class="text-2xl font-semibold text-primary">
-		Message Request Queue
-		<span class="text-sm text-gray-500"> - These messages haven't been sent yet.</span>
-	</h2>
-	<div class="overflow-y-auto max-h-64 p-4">
-		{#each $pendingRequests as request (request.id)}
-			<details class="alert alert-warning shadow-lg mb-2 p-4 relative">
-				<summary>
-					ID: {request.id}, Model: {request.body.model}, Max Tokens: {request.body.max_tokens}
-				</summary>
-				<pre>{JSON.stringify(request.body.messages, null, 2)}</pre>
-				<button on:click={() => deleteRequestFromQueue(request.id)} class="btn btn-sm btn-error absolute top-0 right-0">
-					<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-						><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-				</button>
-			</details>
-		{/each}
+	<ModelDropdown />
+	<div class="form-control w-24">
+		<label for="maxTokens" class="label">
+			<span class="label-text text-primary">Max Tokens:</span>
+		</label>
+		<input type="number" id="maxTokens" bind:value={$maxTokens} class="input input-bordered" />
 	</div>
+	<button on:click={saveMessagesToRequest} class="btn bg-primary text-primary-content mt-4 px-6">Save Conversation to Queue</button>
 </section>

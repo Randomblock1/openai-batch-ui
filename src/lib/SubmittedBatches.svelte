@@ -1,13 +1,13 @@
-<script lang='ts'>
-	import { onMount } from "svelte";
-    import { db, type Batch, type ApiResponse, type Request } from "./db";
-    import { batches, apiKey, pendingRequests } from "./stores";
+<script lang="ts">
+	import { onMount } from 'svelte';
+	import { db, type Batch, type ApiResponse, type Request } from './db';
+	import { batches, apiKey, pendingRequests } from './stores';
 
 	onMount(() => {
 		loadBatches();
 	});
 
-    // Get batch status
+	// Get batch status
 	async function getBatchStatus(batchId: string): Promise<Batch> {
 		const apiKeyValue = $apiKey;
 
@@ -173,22 +173,22 @@
 		},
 		15 * 60 * 1000
 	);
+</script>
 
-    </script>
-
-<section> 
-	<h2 class="text-2xl font-semibold text-primary">Completed Batches
-	  <span class="text-sm text-gray-500"> - Download results to view.</span> 
-	</h2> 
-	<ul class="p-4"> 
-	  {#each $batches as batch}
-		{#if batch.status === 'completed'}
-		  <li class="mb-2">
-			{batch.id} - {batch.status} - {new Date(batch.created_at * 1000).toLocaleString()}
-			<button on:click={() => getBatchResults(batch.id)} class="btn btn-sm btn-outline btn-primary">Get Results</button>
-		  </li>
-		{/if}
-	  {/each}
+<section>
+	<h2 class="text-2xl font-semibold text-primary">
+		Completed Batches
+		<span class="text-sm text-gray-500"> - Download results to view.</span>
+	</h2>
+	<ul class="p-4">
+		{#each $batches as batch}
+			{#if batch.status === 'completed'}
+				<li class="mb-2">
+					{batch.id} - {batch.status} - {new Date(batch.created_at * 1000).toLocaleString()}
+					<button on:click={() => getBatchResults(batch.id)} class="btn btn-sm btn-outline btn-primary">Get Results</button>
+				</li>
+			{/if}
+		{/each}
 	</ul>
-	<button on:click={listBatches} class="btn bg-primary text-primary-content mt-4 px-6">Refresh Batches</button> 
-  </section>
+	<button on:click={listBatches} class="btn bg-primary text-primary-content mt-4 px-6">Refresh Batches</button>
+</section>

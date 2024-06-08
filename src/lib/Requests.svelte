@@ -1,10 +1,8 @@
-<script lang='ts'>
+<script lang="ts">
 	import { db, type Batch } from '$lib/db';
-    import { batches, apiKey, pendingRequests } from './stores';
+	import { batches, apiKey, pendingRequests } from './stores';
 
-    
-
-    // Upload file to OpenAI
+	// Upload file to OpenAI
 	async function uploadFile(fileContent: string): Promise<string> {
 		const formData = new FormData();
 		formData.append('purpose', 'batch');
@@ -55,7 +53,7 @@
 		}
 	}
 
-    // Upload the batched requests to OpenAI
+	// Upload the batched requests to OpenAI
 	async function submitNewBatch() {
 		const reqs = $pendingRequests;
 		const fileContent = reqs.map((request) => JSON.stringify(request)).join('\n');
@@ -74,7 +72,33 @@
 		// Clear pending messages after submission
 		pendingRequests.set([]);
 	}
+
+	// Delete request from queue
+	async function deleteRequestFromQueue(requestId: string) {
+		console.log('Deleting request:', requestId);
+		await db.batchRequests.delete(requestId);
+		pendingRequests.update((rs) => rs.filter((r) => r.id !== requestId));
+	}
 </script>
 
-<button on:click={submitNewBatch} class="btn from-primary to-primary text-primary-content mt-4 px-6">Submit Batch</button>
-  
+<section>
+	<h2 class="text-2xl font-semibold text-primary">
+		Message Request Queue
+		<span class="text-sm text-gray-500"> - These messages haven't been sent yet.</span>
+	</h2>
+	<div class="overflow-y-auto max-h-64 p-4">
+		{#each $pendingRequests as request}
+			<details class="alert alert-warning shadow-lg mb-2 p-4 relative">
+				<summary>
+					ID: {request.id}, Model: {request.body.model}, Max Tokens: {request.body.max_tokens}
+				</summary>
+				<pre>{JSON.stringify(request.body.messages, null, 2)}</pre>
+				<button on:click={() => deleteRequestFromQueue(request.id)} class="btn btn-sm btn-error absolute top-0 right-0">
+					<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+						><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+				</button>
+			</details>
+		{/each}
+	</div>
+	<button on:click={submitNewBatch} class="btn from-primary to-primary text-primary-content mt-4 px-6">Submit Batch</button>
+</section>
