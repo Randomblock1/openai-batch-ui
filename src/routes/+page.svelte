@@ -7,7 +7,10 @@
 </script>
 
 <main class="container mx-auto p-4 space-y-8">
-	<h1 class="text-4xl font-bold text-center text-primary">OpenAI API Batch Interface</h1>
+	<div class="indicator">
+		<span class="indicator-item badge badge-warning">WIP</span> 
+		<h1 class="text-4xl font-bold text-center text-primary">OpenAI API Batch Interface</h1>
+	  </div>
 
 	<section>
 		<h2 class="text-2xl font-semibold text-primary">API Configuration</h2>

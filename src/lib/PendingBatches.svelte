@@ -51,9 +51,14 @@
 							{/each}
 						{:else}
 							<p>Error: Batch requests not found.</p>
+							<!-- TODO Use Files API to try and get messages -->
 						{/if}
 					</ul>
-					<button on:click={() => cancelBatchJob(batch.id)} class="btn btn-sm btn-error absolute top-0 right-0">Cancel</button>
+					{#if batch.status === 'validating' || batch.status === 'in_progress'}
+						<button on:click={() => cancelBatchJob(batch.id)} class="btn btn-sm btn-circle btn-error absolute top-0 right-0">
+							<img src="delete.svg" alt="Delete" />
+						</button>
+					{/if}
 				</details>
 			{/if}
 		{/each}

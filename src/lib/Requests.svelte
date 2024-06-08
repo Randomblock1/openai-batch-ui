@@ -87,15 +87,15 @@
 		Message Request Queue
 		<span class="text-sm text-gray-500"> - These messages haven't been sent yet.</span>
 	</h2>
-	<div class="overflow-y-auto max-h-64 p-4">
+	<div class="overflow-y-auto max-h-96 p-4">
 		{#each $pendingRequests as request}
 			<details class="alert alert-warning shadow-lg mb-2 p-4 relative">
 				<summary>
 					ID: {request.id}, Model: {request.body.model}, Max Tokens: {request.body.max_tokens}
 				</summary>
 				<pre>{JSON.stringify(request.body.messages, null, 2)}</pre>
-				<button on:click={() => deleteRequestFromQueue(request.id)} class="btn btn-sm btn-error absolute top-0 right-0">
-					<img src="/delete.svg" alt="Delete" />
+				<button on:click={() => deleteRequestFromQueue(request.id)} class="btn btn-sm btn-circle btn-error absolute top-0 right-0">
+					<img src="delete.svg" alt="Delete" />
 				</button>
 			</details>
 		{/each}

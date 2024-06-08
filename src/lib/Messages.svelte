@@ -72,7 +72,7 @@
 				<div class="chat-bubble p-4 pr-10">
 					{message.content}
 					<button on:click={() => deleteMessage(index)} class="btn btn-sm btn-circle btn-error absolute top-0 right-0">
-						<img src="/delete.svg" alt="Delete" />
+						<img src="delete.svg" alt="Delete" />
 					</button>
 				</div>
 			</div>
@@ -99,10 +99,11 @@
 		</label>
 		<textarea id="content" bind:value={$message} class="textarea textarea-bordered h-48 resize-none p-4" />
 	</div>
-	<button on:click={() => addMessage($role, $message)} class="btn btn-primary px-6">Add Message</button>
+	<button on:click={() => addMessage($role, $message)} class="btn bg-primary text-primary-content mt-4 px-6">Add Message</button>
 </section>
 
 <section>
+	<h2 class="text-2xl font-semibold text-primary">Request Settings</h2>
 	<ModelDropdown />
 	<div class="form-control w-24">
 		<label for="maxTokens" class="label">
