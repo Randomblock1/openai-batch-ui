@@ -1,24 +1,9 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { apiKey } from '$lib/stores';
 	import Messages from '$lib/Messages.svelte';
 	import Requests from '$lib/Requests.svelte';
 	import PendingBatches from '$lib/PendingBatches.svelte';
 	import SubmittedBatches from '$lib/CompletedBatches.svelte';
-
-	apiKey.subscribe((value) => {
-		if (value) {
-			localStorage.setItem('openai_api_key', $apiKey);
-		}
-	});
-
-	// Load API Key from localStorage on mount
-	onMount(() => {
-		const storedApiKey = localStorage.getItem('openai_api_key');
-		if (storedApiKey) {
-			apiKey.set(storedApiKey);
-		}
-	});
 </script>
 
 <main class="container mx-auto p-4 space-y-8">
@@ -30,7 +15,7 @@
 			<label for="apiKey" class="label">
 				<span class="label-text text-primary">API Key:</span>
 			</label>
-			<input type="password" id="apiKey" bind:value={$apiKey} class="input input-bordered w-full" />
+			<input type="text" id="apiKey" bind:value={$apiKey} class="input input-bordered w-full" />
 		</div>
 	</section>
 

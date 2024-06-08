@@ -100,5 +100,5 @@
 			</details>
 		{/each}
 	</div>
-	<button on:click={submitNewBatch} class="btn from-primary to-primary text-primary-content mt-4 px-6">Submit Batch</button>
+	<button on:click={submitNewBatch} class="btn btn-primary px-6">Submit Batch</button>
 </section>

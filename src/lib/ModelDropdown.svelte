@@ -3,10 +3,10 @@
 	import { apiKey, selectedModel } from './stores';
 
 	// Define Writable store for available models
-	const models = writable<string[]>([]);
+	const models = writable<string[]>(["Enter your API key to fetch models."]);
 
 	apiKey.subscribe(async (value) => {
-		if (value) {
+		if (value && value.length === 56) {
 			await updateModels();
 		}
 	});
@@ -25,16 +25,15 @@
 	}
 
 	async function getAvailableModels(): Promise<string[]> {
-		const apiKeyValue = $apiKey;
-
-		if (!apiKeyValue) {
+		if (!$apiKey || $apiKey.length !== 56) {
+			alert('Please enter a valid API key to fetch available models.')
 			return [];
 		}
 
 		try {
 			const response = await fetch('https://api.openai.com/v1/models', {
 				headers: {
-					Authorization: `Bearer ${apiKeyValue}`
+					Authorization: `Bearer ${$apiKey}`
 				}
 			});
 

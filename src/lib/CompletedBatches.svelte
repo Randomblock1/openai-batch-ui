@@ -4,17 +4,23 @@
 	import { batches, apiKey, pendingRequests } from './stores';
 
 	onMount(() => {
-		loadBatches();
+		if ($apiKey && $apiKey.length === 56) {
+			listBatches();
+		}
+	});
+
+	apiKey.subscribe((value) => {
+		if (value && value.length === 56) {
+			listBatches();
+		}
 	});
 
 	// Get batch status
 	async function getBatchStatus(batchId: string): Promise<Batch> {
-		const apiKeyValue = $apiKey;
-
 		try {
 			const response = await fetch(`https://api.openai.com/v1/batches/${batchId}`, {
 				headers: {
-					Authorization: `Bearer ${apiKeyValue}`
+					Authorization: `Bearer ${$apiKey}`
 				}
 			});
 
@@ -68,12 +74,10 @@
 
 	// Download batch results file
 	async function downloadResultsFile(fileId: string): Promise<string> {
-		const apiKeyValue = $apiKey;
-
 		try {
 			const response = await fetch(`https://api.openai.com/v1/files/${fileId}/content`, {
 				headers: {
-					Authorization: `Bearer ${apiKeyValue}`
+					Authorization: `Bearer ${$apiKey}`
 				}
 			});
 
@@ -91,12 +95,15 @@
 
 	// List batches
 	async function listBatches() {
-		const apiKeyValue = $apiKey;
+		if (!$apiKey || $apiKey.length !== 56) {
+			alert('Please enter a valid API key to fetch available models.')
+			return [];
+		}
 
 		try {
 			const response = await fetch('https://api.openai.com/v1/batches?limit=10', {
 				headers: {
-					Authorization: `Bearer ${apiKeyValue}`
+					Authorization: `Bearer ${$apiKey}`
 				}
 			});
 
