@@ -96,7 +96,7 @@
 	// List batches
 	async function listBatches() {
 		if (!$apiKey || $apiKey.length !== 56) {
-			alert('Please enter a valid API key to fetch available models.')
+			alert('Please enter a valid API key to fetch available models.');
 			return [];
 		}
 

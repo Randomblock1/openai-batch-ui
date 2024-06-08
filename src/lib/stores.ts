@@ -5,13 +5,13 @@ import { db } from './db';
 export const apiKey = writable<string>();
 const storedApiKey = localStorage.getItem('openai_api_key');
 if (storedApiKey) {
-    apiKey.set(storedApiKey);
+	apiKey.set(storedApiKey);
 }
 
 apiKey.subscribe((value) => {
-    if (value) {
-        localStorage.setItem('openai_api_key', get(apiKey));
-    }
+	if (value) {
+		localStorage.setItem('openai_api_key', get(apiKey));
+	}
 });
 
 export const batches = writable<Batch[]>([]);

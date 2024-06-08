@@ -8,7 +8,7 @@
 
 <main class="container mx-auto p-4 space-y-8">
 	<h1 class="text-4xl font-bold text-center text-primary">OpenAI API Batch Interface</h1>
-	
+
 	<section>
 		<h2 class="text-2xl font-semibold text-primary">API Configuration</h2>
 		<div class="form-control w-full max-w-xs">

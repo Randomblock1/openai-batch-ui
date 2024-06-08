@@ -3,7 +3,7 @@
 	import { apiKey, selectedModel } from './stores';
 
 	// Define Writable store for available models
-	const models = writable<string[]>(["Enter your API key to fetch models."]);
+	const models = writable<string[]>(['Enter your API key to fetch models.']);
 
 	apiKey.subscribe(async (value) => {
 		if (value && value.length === 56) {
@@ -26,7 +26,7 @@
 
 	async function getAvailableModels(): Promise<string[]> {
 		if (!$apiKey || $apiKey.length !== 56) {
-			alert('Please enter a valid API key to fetch available models.')
+			alert('Please enter a valid API key to fetch available models.');
 			return [];
 		}
 
