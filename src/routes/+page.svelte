@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { apiKey } from '$lib/stores';
+	import { apiKey, defaultSystemPrompt } from '$lib/stores';
 	import Messages from '$lib/Messages.svelte';
 	import Requests from '$lib/Requests.svelte';
 	import PendingBatches from '$lib/PendingBatches.svelte';
@@ -18,7 +18,18 @@
 			<label for="apiKey" class="label">
 				<span class="label-text text-primary">API Key:</span>
 			</label>
-			<input type="text" id="apiKey" bind:value={$apiKey} class="input input-bordered w-full" />
+			<input type="password" id="apiKey" bind:value={$apiKey} class="input input-bordered w-full" />
+		</div>
+		<div class="form-control w-full">
+			<label for="defaultSystemPrompt" class="label">
+				<span class="label-text text-primary">Default System Prompt:</span>
+			</label>
+			<textarea
+				id="defaultSystemPrompt"
+				bind:value={$defaultSystemPrompt}
+				class="textarea textarea-bordered w-full resize-y"
+				rows="3"
+			/>
 		</div>
 	</section>
 

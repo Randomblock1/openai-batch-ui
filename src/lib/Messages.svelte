@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { db, type Request, type Message } from './db';
 	import { writable } from 'svelte/store';
-	import { pendingRequests, selectedModel } from './stores';
+	import { pendingRequests, selectedModel, defaultSystemPrompt } from './stores';
 	import ModelDropdown from './ModelDropdown.svelte';
 
 	const message = writable('');
@@ -11,7 +11,7 @@
 	export const messages = writable<Message[]>([
 		{
 			role: 'system',
-			content: 'You are ChatGPT, a large language model trained by OpenAI, based on the GPT-4 architecture. Knowledge cutoff: 2023-10.'
+			content: $defaultSystemPrompt
 		}
 	]);
 
@@ -29,7 +29,8 @@
 	// Serialize the current request and reset the conversation
 	function saveMessagesToRequest() {
 		const request: Request = {
-			id: `request-${Date.now()}`,
+			id: `request-${Date.now()}`, // For IndexedDB
+			custom_id: `req_${Date.now()}_${Math.random().toString(16).substring(2)}`, // For OpenAI
 			method: 'POST',
 			url: '/v1/chat/completions',
 			body: {
@@ -52,7 +53,7 @@
 		messages.set([
 			{
 				role: 'system',
-				content: 'You are ChatGPT, a large language model trained by OpenAI, based on the GPT-4 architecture. Knowledge cutoff: 2023-10.'
+				content: $defaultSystemPrompt
 			}
 		]);
 	}

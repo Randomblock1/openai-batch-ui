@@ -56,7 +56,12 @@
 	// Upload the batched requests to OpenAI
 	async function submitNewBatch() {
 		const reqs = $pendingRequests;
-		const fileContent = reqs.map((request) => JSON.stringify(request)).join('\n');
+		const fileContent = reqs
+			.map((r) => {
+				const { id, ...openaiRequest } = r; // Exclude 'id' (Dexie key)
+				return JSON.stringify(openaiRequest);
+			})
+			.join('\n');
 		const fileId = await uploadFile(fileContent);
 		const batch = await createBatchJob(fileId);
 

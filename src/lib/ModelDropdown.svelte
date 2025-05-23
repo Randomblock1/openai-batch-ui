@@ -13,14 +13,24 @@
 
 	async function updateModels() {
 		const availableModels = await getAvailableModels();
+		availableModels.sort((a, b) => a.localeCompare(b));
 		models.set(availableModels);
 		// Set the initially selected model (if any models are available)
 		if (availableModels.length > 0) {
-			if (availableModels.includes('gpt-4o')) {
+			const previouslySelectedModel = get(selectedModel); // Value from localStorage via stores.ts
+			if (previouslySelectedModel && availableModels.includes(previouslySelectedModel)) {
+				selectedModel.set(previouslySelectedModel);
+			} else if (availableModels.includes('gpt-4.1')) { // New default
+				selectedModel.set('gpt-4.1');
+			} else if (availableModels.includes('gpt-4o')) { // Fallback to old default
 				selectedModel.set('gpt-4o');
-			} else {
+			} else if (availableModels.length > 0) {
 				selectedModel.set(availableModels[0]);
+			} else {
+				selectedModel.set(undefined); // Should be covered by outer if, but good for clarity
 			}
+		} else {
+			selectedModel.set(undefined);
 		}
 	}
 

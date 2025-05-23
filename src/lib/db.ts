@@ -7,7 +7,8 @@ export type Message = {
 };
 
 export type Request = {
-	id: string;
+	id: string; // This existing ID is for IndexedDB key, can remain
+	custom_id: string; // New field for OpenAI batch request
 	method: string;
 	url: string;
 	body: {

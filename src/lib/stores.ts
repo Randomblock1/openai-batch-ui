@@ -20,4 +20,25 @@ batches.set(await db.batches.toArray());
 export const pendingRequests = writable<Request[]>([]);
 pendingRequests.set(await db.pendingMessages.toArray());
 
-export const selectedModel = writable<string>();
+const storedSelectedModel = localStorage.getItem('selected_model');
+export const selectedModel = writable<string | undefined>(
+	storedSelectedModel ? storedSelectedModel : undefined
+);
+
+selectedModel.subscribe((value) => {
+	if (value) {
+		localStorage.setItem('selected_model', value);
+	}
+});
+
+export const defaultSystemPrompt = writable<string>('You are a helpful assistant.');
+const storedDefaultSystemPrompt = localStorage.getItem('default_system_prompt');
+if (storedDefaultSystemPrompt) {
+	defaultSystemPrompt.set(storedDefaultSystemPrompt);
+}
+
+defaultSystemPrompt.subscribe((value) => {
+	if (value) {
+		localStorage.setItem('default_system_prompt', get(defaultSystemPrompt));
+	}
+});
