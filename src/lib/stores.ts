@@ -20,4 +20,28 @@ batches.set(await db.batches.toArray());
 export const pendingRequests = writable<Request[]>([]);
 pendingRequests.set(await db.pendingMessages.toArray());
 
+export const defaultPrompt = writable<string>();
+const storedPrompt = localStorage.getItem('default_prompt');
+if (storedPrompt) {
+    defaultPrompt.set(storedPrompt);
+} else {
+    defaultPrompt.set('You are a helpful assistant.');
+}
+defaultPrompt.subscribe((value) => {
+    if (value) {
+        localStorage.setItem('default_prompt', value);
+    }
+});
+
 export const selectedModel = writable<string>();
+const storedModel = localStorage.getItem('selected_model');
+if (storedModel) {
+    selectedModel.set(storedModel);
+} else {
+    selectedModel.set('gpt-4.1');
+}
+selectedModel.subscribe((value) => {
+    if (value) {
+        localStorage.setItem('selected_model', value);
+    }
+});

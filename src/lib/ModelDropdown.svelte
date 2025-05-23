@@ -13,6 +13,8 @@
 
 	async function updateModels() {
 		const availableModels = await getAvailableModels();
+		// Sort models alphabetically
+		availableModels.sort((a, b) => a.localeCompare(b));
 		models.set(availableModels);
 		// Set the initially selected model (if any models are available)
 		if (availableModels.length > 0) {

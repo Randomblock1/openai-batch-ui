@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { db } from './db';
+	import { db, type Request } from './db';
 	import { batches, apiKey } from './stores';
+	import { get } from 'svelte/store';
 
 	// Cancel batch job
 	async function cancelBatchJob(batchId: string) {
@@ -27,6 +28,34 @@
 			throw error;
 		}
 	}
+
+	// Fetch original batch requests or errors from OpenAI Files API
+	async function fetchRawRequests(fileId: string): Promise<{ requests?: Request[]; errors?: any }> {
+		try {
+			const response = await fetch(`https://api.openai.com/v1/files/${fileId}/content`, {
+				headers: { Authorization: `Bearer ${get(apiKey)}` }
+			});
+			if (!response.ok) {
+				throw new Error(`Failed to fetch file content: ${response.status} ${response.statusText}`);
+			}
+			const text = await response.text();
+			const lines = text.split('\n').filter((l) => l.trim());
+			const requests: Request[] = [];
+			const errors: any[] = [];
+			for (const line of lines) {
+				const parsed = JSON.parse(line);
+				if (parsed.errors) {
+					errors.push(parsed.errors);
+				} else {
+					requests.push(parsed as Request);
+				}
+			}
+			if (errors.length) return { errors };
+			return { requests };
+		} catch (err) {
+			throw err;
+		}
+	}
 </script>
 
 <section>
@@ -44,14 +73,21 @@
 							{#each batch.requests as request}
 								<details class="alert alert-warning shadow-lg mb-2 ml-4 p-4">
 									<summary>
-										ID: {request.id}, Model: {request.body.model}, Max Tokens: {request.body.max_tokens}
+										ID: {request.custom_id}, Model: {request.body.model}, Max Tokens: {request.body.max_tokens}
 									</summary>
 									<pre>{JSON.stringify(request.body.messages, null, 2)}</pre>
 								</details>
 							{/each}
 						{:else}
-							<p>Error: Batch requests not found.</p>
-							<!-- TODO Use Files API to try and get messages -->
+							{#if batch.errors?.data?.length}
+								<ul class="ml-4 text-error">
+									{#each batch.errors.errors.data as err}
+										<li>{err.message}</li>
+									{/each}
+								</ul>
+							{:else}
+								<p>Error: Batch requests not found.</p>
+							{/if}
 						{/if}
 					</ul>
 					{#if batch.status === 'validating' || batch.status === 'in_progress'}

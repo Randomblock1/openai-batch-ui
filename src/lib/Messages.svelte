@@ -1,17 +1,18 @@
 <script lang="ts">
 	import { db, type Request, type Message } from './db';
-	import { writable } from 'svelte/store';
-	import { pendingRequests, selectedModel } from './stores';
+	import { writable, get } from 'svelte/store';
+	import { pendingRequests, selectedModel, defaultPrompt } from './stores';
 	import ModelDropdown from './ModelDropdown.svelte';
 
 	const message = writable('');
 	const role = writable('user');
 	const maxTokens = writable(1000);
 
+	// Initialize messages with the system prompt from defaultPrompt
 	export const messages = writable<Message[]>([
 		{
 			role: 'system',
-			content: 'You are ChatGPT, a large language model trained by OpenAI, based on the GPT-4 architecture. Knowledge cutoff: 2023-10.'
+			content: get(defaultPrompt)
 		}
 	]);
 
@@ -28,8 +29,12 @@
 
 	// Serialize the current request and reset the conversation
 	function saveMessagesToRequest() {
+		// Generate a unique request id and use it as custom_id
+		const timestamp = Date.now();
+		const randomSegment = Math.random().toString(36).substring(2, 8);
+		const requestId = `request-${timestamp}-${randomSegment}`;
 		const request: Request = {
-			id: `request-${Date.now()}`,
+			custom_id: requestId,
 			method: 'POST',
 			url: '/v1/chat/completions',
 			body: {
@@ -52,7 +57,7 @@
 		messages.set([
 			{
 				role: 'system',
-				content: 'You are ChatGPT, a large language model trained by OpenAI, based on the GPT-4 architecture. Knowledge cutoff: 2023-10.'
+				content: get(defaultPrompt)
 			}
 		]);
 	}

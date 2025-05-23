@@ -7,7 +7,8 @@ export type Message = {
 };
 
 export type Request = {
-	id: string;
+	/** Developer-provided per-request id */
+	custom_id: string;
 	method: string;
 	url: string;
 	body: {
@@ -54,6 +55,7 @@ export type Batch = {
 	input_file_id: string;
 	output_file_id: string | null;
 	requests: Request[]; // Store requests associated with batch
+	errors: any;
 };
 
 class OpenAIBatchDatabase extends Dexie {
@@ -63,11 +65,31 @@ class OpenAIBatchDatabase extends Dexie {
 
 	constructor() {
 		super('openai-batches');
+		// Version 1: use 'id' as primary key for backward compatibility
 		this.version(1).stores({
 			pendingMessages: 'id',
 			batches: 'id',
 			batchRequests: 'id'
 		});
+
+		// Version 2: switch to 'custom_id' primary key and migrate existing records
+		this.version(2)
+			.stores({
+				pendingMessages: 'custom_id',
+				batches: 'id',
+				batchRequests: 'custom_id'
+			})
+			.upgrade(tx =>
+				Promise.all([
+					tx.table('pendingMessages').toCollection().modify(item => {
+						// backfill custom_id from id
+						(item as any).custom_id = (item as any).id;
+					}),
+					tx.table('batchRequests').toCollection().modify(item => {
+						(item as any).custom_id = (item as any).id;
+					})
+				])
+			);
 	}
 }
 
